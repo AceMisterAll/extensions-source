@@ -72,9 +72,24 @@ jobs:
         with:
           cache-read-only: ${{ matrix.chunk.number > 1 }}
 
+      - name: Create dummy signing key
+        run: |
+          keytool -genkeypair \
+            -alias androiddebugkey \
+            -keypass android \
+            -keystore signingkey.jks \
+            -storepass android \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000
+
       - name: Build extensions (${{ matrix.chunk.number }})
         env:
           MODULES: ${{ join(matrix.chunk.modules, ' ') }}
+          ALIAS: androiddebugkey
+          KEY_STORE_PASSWORD: android
+          KEY_PASSWORD: android
         run: |
           ./gradlew $MODULES
 
@@ -84,6 +99,9 @@ jobs:
           name: "individual-apks-${{ matrix.chunk.number }}"
           path: "**/*.apk"
           retention-days: 1
+
+      - name: Clean up CI files
+        run: rm signingkey.jks
 
   publish:
     name: Publish extension repo
